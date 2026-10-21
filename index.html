@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0b0c" />
+    <meta
+      name="description"
+      content="AFTERGLOW — a first-person restoration simulator. Bring forgotten things back to life."
+    />
+    <!-- Inline icon: avoids a favicon.ico request (and its 404 console error). -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0b0c'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23e8a24f'/%3E%3C/svg%3E"
+    />
+    <title>AFTERGLOW</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Presentation layers; the canvas stays the primary experience. -->
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="wordmark" aria-hidden="true">AFTERGLOW</div>
+
+    <div id="status" class="status" role="status" aria-live="polite">
+      <p class="status__title"></p>
+      <pre class="status__detail"></pre>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
