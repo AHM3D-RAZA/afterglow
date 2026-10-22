@@ -9,6 +9,7 @@ import {
   woodRecipe,
 } from '../procedural/recipes';
 import { createSurfaceTextures, type SurfaceRecipe } from '../procedural/surfaces';
+import { addAmbientDirt } from './ambientDirt';
 
 /**
  * Every material in the workshop, created once and shared.
@@ -22,7 +23,7 @@ export function createMaterials() {
     params: MeshStandardMaterialParameters & { bumpScale?: number } = {},
   ): MeshStandardMaterial => {
     const { map, detailMap } = createSurfaceTextures(recipe);
-    return new MeshStandardMaterial({
+    const material = new MeshStandardMaterial({
       map,
       roughnessMap: detailMap,
       bumpMap: detailMap,
@@ -31,6 +32,8 @@ export function createMaterials() {
       metalness: 0,
       ...params,
     });
+    addAmbientDirt(material);
+    return material;
   };
 
   const solid = (color: number, roughness: number, metalness = 0): MeshStandardMaterial =>
@@ -71,9 +74,10 @@ export function createMaterials() {
         seed: 2201,
         baseColor: [152, 144, 122],
         mottleColor: [176, 166, 138],
-        grimeColor: [64, 55, 42],
-        grimeCoverage: 0.28,
+        grimeColor: [100, 90, 72],
+        grimeCoverage: 0.2,
         exposedColor: 'rgb(178,170,152)',
+        baseGrime: 0,
       }),
       { bumpScale: 2 },
     ),
@@ -82,9 +86,10 @@ export function createMaterials() {
         seed: 2202,
         baseColor: [52, 80, 74],
         mottleColor: [68, 98, 90],
-        grimeColor: [22, 28, 26],
-        grimeCoverage: 0.3,
+        grimeColor: [34, 44, 42],
+        grimeCoverage: 0.26,
         exposedColor: 'rgb(150,150,134)',
+        baseGrime: 0.3,
       }),
       { bumpScale: 2 },
     ),
@@ -93,9 +98,9 @@ export function createMaterials() {
     trim: solid(0x1f2326, 0.6, 0.3),
 
     // --- Furniture and storage ---
-    benchWood: surface(woodRecipe(), { bumpScale: 1 }),
-    shelfBoard: surface(woodRecipe(), { color: 0xc4b29a, bumpScale: 1 }),
-    crateWood: surface(woodRecipe(), { color: 0x9b9486, bumpScale: 1.4 }),
+    benchWood: surface(woodRecipe(3303), { bumpScale: 1 }),
+    shelfBoard: surface(woodRecipe(3304), { color: 0xc4b29a, bumpScale: 1 }),
+    crateWood: surface(woodRecipe(3305), { color: 0x9b9486, bumpScale: 1.4 }),
     shelfSteel: paintedSteel(3101, [66, 86, 104], [84, 106, 124], [26, 32, 38], { wear: 1.5 }),
     arcadeBody: paintedSteel(7001, [30, 44, 66], [42, 58, 82], [12, 16, 22], { wear: 0.35, metalness: 0.15 }),
     darkSteel: paintedSteel(3102, [42, 46, 50], [58, 62, 66], [16, 16, 16], { wear: 1.3 }),

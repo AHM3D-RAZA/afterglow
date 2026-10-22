@@ -2,7 +2,9 @@ import type { PerspectiveCamera, WebGLRenderer, WebGLRenderTarget } from 'three'
 import { RENDERER } from '../config';
 import { createEnvironment } from '../scene/environment';
 import { createWorkshop, type Workshop } from '../scene/createWorkshop';
+import { PlayerController } from '../player/PlayerController';
 import { createCameraRig, type CameraRig } from './cameraRig';
+import { ControlsHint } from './ControlsHint';
 import { createRenderer } from './createRenderer';
 
 /**
@@ -16,6 +18,9 @@ export class App {
   private readonly cameraRig: CameraRig;
   private readonly workshop: Workshop;
   private readonly environment: WebGLRenderTarget;
+  private readonly player: PlayerController;
+  private readonly controlsHint: ControlsHint;
+  private lastFrameMs: number | null = null;
   private disposed = false;
 
   constructor(private readonly container: HTMLElement) {
@@ -25,6 +30,14 @@ export class App {
       this.camera = this.cameraRig.camera;
       this.workshop = createWorkshop();
       this.environment = createEnvironment(this.renderer);
+      // The callback only runs on user input, after construction has finished.
+      this.player = new PlayerController(
+        this.camera,
+        this.workshop.solidFootprints,
+        this.renderer.domElement,
+        (state) => this.controlsHint.show(state),
+      );
+      this.controlsHint = new ControlsHint();
     } catch (error) {
       // Don't leave a dead canvas and GL context behind if scene construction fails.
       this.renderer.dispose();
@@ -38,6 +51,8 @@ export class App {
   }
 
   start(): void {
+    this.lastFrameMs = null;
+    this.controlsHint.show(this.player.pointerState);
     window.addEventListener('resize', this.handleResize);
     this.renderer.setAnimationLoop(this.tick);
   }
@@ -48,6 +63,8 @@ export class App {
 
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.handleResize);
+    this.player.dispose();
+    this.controlsHint.dispose();
     this.workshop.scene.environment = null;
     this.workshop.dispose();
     this.environment.dispose();
@@ -57,9 +74,11 @@ export class App {
 
   private readonly tick = (timeMs: number): void => {
     try {
-      const elapsedSeconds = timeMs / 1000;
-      this.workshop.update(elapsedSeconds);
-      this.cameraRig.update(elapsedSeconds);
+      // The first frame, and any frame after the loop was stopped, has no previous time.
+      const deltaSeconds = this.lastFrameMs === null ? 0 : (timeMs - this.lastFrameMs) / 1000;
+      this.lastFrameMs = timeMs;
+      this.player.update(deltaSeconds);
+      this.workshop.update(timeMs / 1000);
       this.renderer.render(this.workshop.scene, this.camera);
     } catch (error) {
       // Stop instead of throwing the same error 60 times a second; the caller still sees it.

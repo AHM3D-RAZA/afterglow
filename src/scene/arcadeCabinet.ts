@@ -9,6 +9,7 @@ import {
 import { LAYOUT } from '../config';
 import { createMarqueeTexture } from '../procedural/marquee';
 import { addBox, addMesh, addRod, createCylinderGeometry } from '../util/geometry';
+import { markSolid } from './colliders';
 import type { WorkshopMaterials } from './materials';
 
 const WIDTH = 0.64;
@@ -53,7 +54,7 @@ export function createArcadeCabinet(materials: WorkshopMaterials): Group {
   addControlPanel(cabinet, materials);
   addCoinDoor(cabinet, materials);
 
-  return cabinet;
+  return markSolid(cabinet);
 }
 
 function addBody(cabinet: Group, materials: WorkshopMaterials): void {

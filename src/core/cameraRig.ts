@@ -1,25 +1,18 @@
-import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
+import { MathUtils, PerspectiveCamera } from 'three';
 import { CAMERA } from '../config';
 
 /**
- * A fixed, composed camera with an optional barely-there sway.
- * This is a viewing camera, not player controls: nothing here reads input.
+ * The player's eye. It owns the camera and keeps its projection right for the
+ * viewport; where it stands and where it looks is the PlayerController's job.
  */
 export interface CameraRig {
   readonly camera: PerspectiveCamera;
   /** Updates aspect ratio and field of view for the given viewport size (CSS pixels). */
   setViewport(width: number, height: number): void;
-  update(elapsedSeconds: number): void;
 }
 
 export function createCameraRig(): CameraRig {
   const camera = new PerspectiveCamera(CAMERA.fov, 1, CAMERA.near, CAMERA.far);
-  const basePosition = new Vector3(...CAMERA.position);
-  const lookAtTarget = new Vector3(...CAMERA.lookAt);
-  const driftEnabled = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  camera.position.copy(basePosition);
-  camera.lookAt(lookAtTarget);
 
   return {
     camera,
@@ -28,17 +21,6 @@ export function createCameraRig(): CameraRig {
       camera.aspect = width / height;
       camera.fov = verticalFovForAspect(camera.aspect);
       camera.updateProjectionMatrix();
-    },
-
-    update(elapsedSeconds) {
-      if (!driftEnabled) return;
-      const phase = (elapsedSeconds / CAMERA.drift.periodSeconds) * Math.PI * 2;
-      camera.position.set(
-        basePosition.x + Math.sin(phase) * CAMERA.drift.amplitude,
-        basePosition.y + Math.sin(phase * 1.7 + 1.3) * CAMERA.drift.amplitude * 0.5,
-        basePosition.z,
-      );
-      camera.lookAt(lookAtTarget);
     },
   };
 }

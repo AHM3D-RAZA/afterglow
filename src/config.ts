@@ -22,13 +22,6 @@ export const CAMERA = {
   maxVerticalFov: 78,
   near: 0.1,
   far: 40,
-  position: [1.3, 1.5, 2.0],
-  lookAt: [0.2, 1.15, -3.3],
-  drift: {
-    /** Slow "breathing" sway that makes depth readable; disabled for reduced motion. */
-    amplitude: 0.035,
-    periodSeconds: 13,
-  },
 } as const;
 
 export const ROOM = {
@@ -37,6 +30,24 @@ export const ROOM = {
   height: 3.8,
   wallThickness: 0.2,
   dadoHeight: 1.1,
+} as const;
+
+/** First-person player. Distances in meters, speeds in meters per second, angles in radians. */
+export const PLAYER = {
+  /** Camera height above the floor; the player never leaves it (no jumping or crouching). */
+  eyeHeight: 1.65,
+  /** Horizontal collision circle. Wide enough that the camera never clips into a wall or prop. */
+  radius: 0.28,
+  walkSpeed: 1.8,
+  /** Radians of turn per pixel of mouse movement. */
+  lookSensitivity: 0.0022,
+  /** Pitch limit; stops just short of straight up/down so the view never flips. */
+  maxPitch: 1.45,
+  /** Largest frame time used for movement, so a stalled tab cannot teleport the player. */
+  maxFrameSeconds: 0.1,
+  /** Starting position on the floor (x, z) and the point the player starts out facing. */
+  spawn: [-0.2, 1.1],
+  spawnLookAt: [-1.95, 1.1, -3.3],
 } as const;
 
 /** Where the main set pieces stand. Lighting aims at these, so they live in one place. */

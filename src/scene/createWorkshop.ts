@@ -1,7 +1,9 @@
 import { Color, FogExp2, Group, Scene } from 'three';
 import { PALETTE } from '../config';
 import { disposeObject3D } from '../util/dispose';
+import type { Rect } from '../util/rect';
 import { createArcadeCabinet } from './arcadeCabinet';
+import { collectSolidFootprints } from './colliders';
 import { createLighting } from './lighting';
 import { createMaterials } from './materials';
 import { createFloorProps } from './props';
@@ -11,6 +13,8 @@ import { createWorkbench } from './workbench';
 
 export interface Workshop {
   readonly scene: Scene;
+  /** Floor footprints of solid furniture and props, for player collision. */
+  readonly solidFootprints: readonly Rect[];
   /** Advances anything animated (currently just the flickering pendant). */
   update(elapsedSeconds: number): void;
   /** Releases every geometry, material, texture and shadow map the workshop owns. */
@@ -42,6 +46,7 @@ export function createWorkshop(): Workshop {
 
   return {
     scene,
+    solidFootprints: collectSolidFootprints(contents),
     update: lighting.update,
     dispose: () => disposeObject3D(contents),
   };

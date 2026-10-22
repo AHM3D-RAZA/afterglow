@@ -8,6 +8,7 @@ import {
   LAY_ALONG_X,
   type Vec3,
 } from '../util/geometry';
+import { markSolid } from './colliders';
 import type { WorkshopMaterials } from './materials';
 import {
   createBucket,
@@ -38,7 +39,7 @@ export function createWorkbench(materials: WorkshopMaterials): Group {
   addTopClutter(bench, materials);
   addLowerShelfClutter(bench, materials);
 
-  return bench;
+  return markSolid(bench);
 }
 
 function addFrame(bench: Group, materials: WorkshopMaterials): void {

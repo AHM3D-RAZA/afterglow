@@ -149,3 +149,35 @@ body {
     animation: none;
   }
 }
+
+/* ---- Controls hint ---- */
+
+.controls-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  max-width: 90vw;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(10, 11, 12, 0.55);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--ink-dim);
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 800ms ease;
+}
+
+.controls-hint--hidden {
+  opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .controls-hint {
+    white-space: normal;
+  }
+}

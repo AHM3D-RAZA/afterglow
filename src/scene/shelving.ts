@@ -1,6 +1,7 @@
 import { Group } from 'three';
 import { LAYOUT } from '../config';
 import { addBox, addMesh, addRod, createCylinderGeometry, type Vec3 } from '../util/geometry';
+import { markSolid } from './colliders';
 import type { WorkshopMaterials } from './materials';
 import {
   createBucket,
@@ -34,7 +35,7 @@ export function createShelving(materials: WorkshopMaterials): Group {
   addLevelTwo(unit, materials);
   addLevelThree(unit, materials);
 
-  return unit;
+  return markSolid(unit);
 }
 
 function addStructure(unit: Group, materials: WorkshopMaterials): void {

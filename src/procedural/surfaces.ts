@@ -1,6 +1,7 @@
 import { CanvasTexture, NoColorSpace, RepeatWrapping, SRGBColorSpace } from 'three';
-import { clamp01, fbm, smoothstep } from './noise';
+import { clamp01, domainWarp, fbm, resample, smoothstep } from './noise';
 import { createRng, type Rng } from './random';
+import { createStainShape, drawStain, type StainOptions } from './stains';
 
 /** sRGB color, each channel 0–255. */
 export type Rgb = readonly [number, number, number];
@@ -29,6 +30,18 @@ export interface SurfaceRecipe {
   roughness: readonly [number, number];
   /** Lattice cells for the large-scale color drift; stretch one axis for wood grain. */
   mottleCells?: readonly [number, number];
+  /**
+   * Lattice cells (x, y) of the broad grime layer. Unequal values stretch the
+   * features: fewer cells along y gives tall, drip-like discoloration. Default [3, 3].
+   */
+  grimeCells?: readonly [number, number];
+  /**
+   * Where dirt tends to gather, as an offset added to the grime noise before it
+   * is thresholded (so the edge of the dirt stays irregular instead of becoming
+   * a gradient). `u` runs left to right across the tile; `v` runs bottom to top
+   * (up on walls, away from the viewer on the floor). Typical range −0.2 … 0.4.
+   */
+  grimeBias?: (u: number, v: number) => number;
   details?: (context: SurfaceDetailContext) => void;
 }
 
@@ -48,8 +61,13 @@ export interface SurfaceDetailContext {
   readonly rng: Rng;
   strokePath(draw: (ctx: CanvasRenderingContext2D) => void, paint: SurfacePaint, lineWidth: number): void;
   fillPath(draw: (ctx: CanvasRenderingContext2D) => void, paint: SurfacePaint): void;
-  /** Soft round stain that fades to transparent at its edge. */
-  blob(x: number, y: number, radius: number, paint: SurfacePaint): void;
+  /**
+   * Irregular, noise-edged stain centered on (x, y). Wraps around the tile edges.
+   * `radius` is in pixels; see StainOptions for shaping it.
+   */
+  stain(x: number, y: number, radius: number, paint: SurfacePaint, options?: StainOptions): void;
+  /** Tileable fractal noise covering the whole texture, values 0–1. Use it to cluster features. */
+  noiseField(cells: number, octaves?: number): Float32Array;
 }
 
 export interface SurfaceTextures {
@@ -76,6 +94,49 @@ export function createSurfaceTextures(recipe: SurfaceRecipe): SurfaceTextures {
   };
 }
 
+/** Half-width of the grime threshold; larger = softer-edged dirt. */
+const GRIME_FEATHER = 0.2;
+
+/** Stains fainter than this are painted on the albedo map only. */
+const FAINT_STAIN_ALPHA = 0.08;
+
+/**
+ * Broad discoloration plus finer irregular variation. Both layers are domain
+ * warped, so no single lattice scale or round "island" shape dominates.
+ *
+ * Grime is smooth, so it is generated at reduced resolution (a quarter for
+ * 1024 px textures, half otherwise) and resampled, with no visible difference.
+ */
+function createGrimeField(recipe: SurfaceRecipe, rng: Rng): Float32Array {
+  const size = recipe.resolution;
+  // Large textures can afford a coarser grid: the finest grime layer is still >= 4 px per cell.
+  const workSize = size >= 1024 ? size / 4 : size / 2;
+  const [cellsX, cellsY] = recipe.grimeCells ?? [3, 3];
+
+  const broad = domainWarp(
+    fbm({ width: workSize, height: workSize, cellsX, cellsY, octaves: 4 }, rng),
+    workSize,
+    0.1,
+    rng,
+  );
+  const fine = domainWarp(
+    fbm({ width: workSize, height: workSize, cellsX: cellsX * 5, cellsY: cellsY * 5, octaves: 3, persistence: 0.55 }, rng),
+    workSize,
+    0.04,
+    rng,
+  );
+
+  // The bias is evaluated on this coarse grid too; it is a broad tendency, not pixel detail.
+  const bias = recipe.grimeBias;
+  const combined = new Float32Array(workSize * workSize);
+  for (let i = 0; i < combined.length; i++) {
+    const u = (i % workSize) / workSize;
+    const v = 1 - Math.floor(i / workSize) / workSize;
+    combined[i] = 0.68 * broad[i] + 0.32 * fine[i] + (bias ? bias(u, v) : 0);
+  }
+  return resample(combined, workSize, size);
+}
+
 function paintBaseLayers(
   recipe: SurfaceRecipe,
   rng: Rng,
@@ -87,7 +148,7 @@ function paintBaseLayers(
   const grainCells = Math.max(2, size / 8);
 
   const mottle = fbm({ width: size, height: size, cellsX: mottleX, cellsY: mottleY, octaves: 5 }, rng);
-  const grime = fbm({ width: size, height: size, cellsX: 2, cellsY: 2, octaves: 4 }, rng);
+  const grime = createGrimeField(recipe, rng);
   const grain = fbm(
     { width: size, height: size, cellsX: grainCells, cellsY: grainCells, octaves: 2, persistence: 0.6 },
     rng,
@@ -102,7 +163,7 @@ function paintBaseLayers(
 
   for (let i = 0; i < size * size; i++) {
     const m = mottle[i];
-    const g = smoothstep(grimeEdge - 0.3, grimeEdge + 0.3, grime[i]);
+    const g = smoothstep(grimeEdge - GRIME_FEATHER, grimeEdge + GRIME_FEATHER, grime[i]);
     const n = grain[i];
     const brightness = 1 + (n - 0.5) * recipe.grain;
 
@@ -173,14 +234,24 @@ function createDetailContext(
       });
     },
 
-    blob(x, y, radius, paint) {
+    stain(x, y, radius, paint, options = {}) {
+      // The shape is built once, outside forEachTarget, so both maps get the
+      // identical stain and `rng` is consumed exactly once.
+      const shape = createStainShape(radius, options, rng);
+      // A very faint stain changes the albedo but not the roughness or bump
+      // measurably, so the detail map skips it (it is a large share of the drawing cost).
+      const faint = (paint.alpha ?? 1) < FAINT_STAIN_ALPHA;
       forEachTarget(paint, (ctx, style) => {
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        gradient.addColorStop(0, style);
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+        if (faint && ctx === detailContext) return;
+        drawStain(ctx, shape, style, x, y, recipe.resolution);
       });
+    },
+
+    noiseField(cells, octaves = 3) {
+      return fbm(
+        { width: recipe.resolution, height: recipe.resolution, cellsX: cells, cellsY: cells, octaves },
+        rng,
+      );
     },
   };
 }
