@@ -4,17 +4,21 @@ import { disposeObject3D } from '../util/dispose';
 import type { Rect } from '../util/rect';
 import { createArcadeCabinet } from './arcadeCabinet';
 import { collectSolidFootprints } from './colliders';
+import type { CleanableSurface } from './dirtLayer';
 import { createLighting } from './lighting';
 import { createMaterials } from './materials';
 import { createFloorProps } from './props';
 import { createRoom } from './room';
 import { createShelving } from './shelving';
+import { createTestPanel } from './testPanel';
 import { createWorkbench } from './workbench';
 
 export interface Workshop {
   readonly scene: Scene;
   /** Floor footprints of solid furniture and props, for player collision. */
   readonly solidFootprints: readonly Rect[];
+  /** Surfaces whose dirt can be sprayed away. */
+  readonly cleanables: readonly CleanableSurface[];
   /** Advances anything animated (currently just the flickering pendant). */
   update(elapsedSeconds: number): void;
   /** Releases every geometry, material, texture and shadow map the workshop owns. */
@@ -32,6 +36,8 @@ export function createWorkshop(): Workshop {
   const materials = createMaterials();
   const lighting = createLighting(materials);
 
+  const testPanel = createTestPanel(materials);
+
   const contents = new Group();
   contents.name = 'workshop-contents';
   contents.add(
@@ -40,6 +46,7 @@ export function createWorkshop(): Workshop {
     createShelving(materials),
     createArcadeCabinet(materials),
     createFloorProps(materials),
+    testPanel.group,
     lighting.group,
   );
   scene.add(contents);
@@ -47,6 +54,7 @@ export function createWorkshop(): Workshop {
   return {
     scene,
     solidFootprints: collectSolidFootprints(contents),
+    cleanables: [testPanel.surface],
     update: lighting.update,
     dispose: () => disposeObject3D(contents),
   };

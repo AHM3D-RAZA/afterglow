@@ -46,6 +46,11 @@ export class PlayerController {
     return this.input.pointerState;
   }
 
+  /** True while the primary mouse button is held and the mouse is captured. */
+  get isPrimaryHeld(): boolean {
+    return this.input.isPrimaryHeld;
+  }
+
   /** Advances the player by `deltaSeconds` of real time. */
   update(deltaSeconds: number): void {
     this.input.consumeLook(this.look);

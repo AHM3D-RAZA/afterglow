@@ -181,3 +181,66 @@ body {
     white-space: normal;
   }
 }
+
+/* ---- Cleaning HUD ---- */
+
+.reticle {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(217, 201, 174, 0.7);
+  box-shadow: 0 0 0 1px rgba(10, 11, 12, 0.5);
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.reticle--hidden {
+  opacity: 0;
+}
+
+.coverage {
+  position: fixed;
+  left: 28px;
+  top: 24px;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: baseline;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 400ms ease;
+}
+
+.coverage--active {
+  opacity: 1;
+}
+
+.coverage__value {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.coverage__track {
+  grid-column: 1 / -1;
+  height: 2px;
+  background: rgba(217, 201, 174, 0.18);
+}
+
+.coverage__bar {
+  height: 100%;
+  background: var(--amber);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 300ms ease;
+}

@@ -45,6 +45,7 @@ export class PlayerInput {
   private lookX = 0;
   private lookY = 0;
   private state: PointerState = 'unlocked';
+  private primaryDown = false;
   private lockedAtMs = 0;
   private disposed = false;
 
@@ -62,6 +63,8 @@ export class PlayerInput {
     window.addEventListener('blur', this.releaseInput);
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
     document.addEventListener('mousemove', this.handleMouseMove);
+    document.addEventListener('mousedown', this.handleMouseDown);
+    document.addEventListener('mouseup', this.handleMouseUp);
     document.addEventListener('pointerlockchange', this.handleLockChange);
     document.addEventListener('pointerlockerror', this.handleLockError);
   }
@@ -72,6 +75,11 @@ export class PlayerInput {
 
   get isLocked(): boolean {
     return this.state === 'locked';
+  }
+
+  /** True while the primary (left) mouse button is held with the mouse captured. */
+  get isPrimaryHeld(): boolean {
+    return this.isLocked && this.primaryDown;
   }
 
   /** Writes the current movement direction into `out`, each component in -1..1. */
@@ -98,6 +106,8 @@ export class PlayerInput {
     window.removeEventListener('blur', this.releaseInput);
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     document.removeEventListener('mousemove', this.handleMouseMove);
+    document.removeEventListener('mousedown', this.handleMouseDown);
+    document.removeEventListener('mouseup', this.handleMouseUp);
     document.removeEventListener('pointerlockchange', this.handleLockChange);
     document.removeEventListener('pointerlockerror', this.handleLockError);
 
@@ -156,13 +166,22 @@ export class PlayerInput {
     this.lookY += clampMagnitude(event.movementY, MAX_DELTA_PER_EVENT);
   };
 
+  private readonly handleMouseDown = (event: MouseEvent): void => {
+    if (event.button === 0) this.primaryDown = true;
+  };
+
+  private readonly handleMouseUp = (event: MouseEvent): void => {
+    if (event.button === 0) this.primaryDown = false;
+  };
+
   private readonly handleVisibilityChange = (): void => {
     if (document.hidden) this.releaseInput();
   };
 
-  /** Forgets all held keys and pending mouse movement. */
+  /** Forgets all held keys, held buttons and pending mouse movement. */
   private readonly releaseInput = (): void => {
     this.heldKeys.clear();
+    this.primaryDown = false;
     this.lookX = 0;
     this.lookY = 0;
   };

@@ -1,9 +1,11 @@
 import type { PerspectiveCamera, WebGLRenderer, WebGLRenderTarget } from 'three';
-import { RENDERER } from '../config';
+import { PLAYER, RENDERER } from '../config';
 import { createEnvironment } from '../scene/environment';
 import { createWorkshop, type Workshop } from '../scene/createWorkshop';
+import { CleaningSystem } from '../cleaning/CleaningSystem';
 import { PlayerController } from '../player/PlayerController';
 import { createCameraRig, type CameraRig } from './cameraRig';
+import { CleaningHud } from './CleaningHud';
 import { ControlsHint } from './ControlsHint';
 import { createRenderer } from './createRenderer';
 
@@ -19,7 +21,9 @@ export class App {
   private readonly workshop: Workshop;
   private readonly environment: WebGLRenderTarget;
   private readonly player: PlayerController;
+  private readonly cleaning: CleaningSystem;
   private readonly controlsHint: ControlsHint;
+  private readonly hud: CleaningHud;
   private lastFrameMs: number | null = null;
   private disposed = false;
 
@@ -36,6 +40,14 @@ export class App {
         this.workshop.solidFootprints,
         this.renderer.domElement,
         (state) => this.controlsHint.show(state),
+      );
+      this.hud = new CleaningHud();
+      this.cleaning = new CleaningSystem(
+        this.renderer,
+        this.camera,
+        this.workshop.scene,
+        this.workshop.cleanables,
+        (_surface, fraction) => this.hud.setCoverage(fraction),
       );
       this.controlsHint = new ControlsHint();
     } catch (error) {
@@ -63,7 +75,9 @@ export class App {
 
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.handleResize);
+    this.cleaning.dispose();
     this.player.dispose();
+    this.hud.dispose();
     this.controlsHint.dispose();
     this.workshop.scene.environment = null;
     this.workshop.dispose();
@@ -78,6 +92,8 @@ export class App {
       const deltaSeconds = this.lastFrameMs === null ? 0 : (timeMs - this.lastFrameMs) / 1000;
       this.lastFrameMs = timeMs;
       this.player.update(deltaSeconds);
+      this.cleaning.update(Math.min(deltaSeconds, PLAYER.maxFrameSeconds), this.player.isPrimaryHeld);
+      this.hud.setAiming(this.player.pointerState === 'locked');
       this.workshop.update(timeMs / 1000);
       this.renderer.render(this.workshop.scene, this.camera);
     } catch (error) {

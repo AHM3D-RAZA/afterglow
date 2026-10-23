@@ -4,7 +4,7 @@ const HIDE_AFTER_MS = 6000;
 
 const MESSAGES: Record<PointerState, string> = {
   unlocked: 'Click to look around',
-  locked: 'W A S D to move · Mouse to look · Esc to release',
+  locked: 'W A S D move · Mouse look · Hold left click to spray · Esc release',
   failed: 'The browser blocked mouse capture. Click again to retry',
 };
 
